@@ -4,104 +4,86 @@
 **RL-Annotate** is a high-performance MERN stack application designed to automate the categorization of unstructured text data using AI Agents. The platform implements a **Human-in-the-Loop (HITL)** verification system, allowing human engineers to review and correct AI-generated labels—simulating the core **RLHF (Reinforcement Learning from Human Feedback)** workflows used in modern LLM training.
 
 ## 🛠️ Tech Stack & Skills Showcased
-*   **Frontend (UI/UX):** React.js (Vite), Modern Vanilla CSS (SaaS aesthetic).
-*   **Backend (API & Logic):** Node.js & Express.js.
-*   **Database (Source of Truth):** MongoDB (Mongoose Schema design for tracking ML metrics).
-*   **AI Integration:** Google Gemini API (Zero-shot text classification).
+*   **Frontend:** React.js (Vite), Modern Vanilla CSS (SaaS aesthetic).
+*   **Backend:** Node.js & Express.js.
+*   **Database:** MongoDB (Mongoose Schema design for tracking ML metrics).
+*   **AI Integration:** Google Gemini API (v2.0 Flash) with robust offline fallback.
 *   **Core Concepts:** Data Operations, AI Auto-Labeling, HITL workflows, System Accuracy metrics.
 
 ## 🚀 Key Features
-*   **AI Agent Auto-Labeling:** Automatically categorizes raw text into specific domains (e.g., Bug, Feature, Urgent, Question) using structured prompting.
+*   **AI Agent Auto-Labeling:** Automatically categorizes raw text into specific domains (Bug, Feature, Urgent, Question, Feedback, General).
 *   **Reasoning Chain Visualization:** Displays the AI's "thought process" behind each label to assist in quality benchmarking.
 *   **Human-Feedback Interface:** A specialized dashboard for engineers to override AI labels, creating a "Ground Truth" dataset for model refinement.
-*   **RLHF Auto-Refine System:** A sophisticated feedback loop where the AI analyzes its own mistakes against human ground truth and suggests its own "Self-Correction" instructions to improve future accuracy.
-*   **Accuracy Analytics:** Real-time calculation of AI precision vs. Human verification to monitor model performance.
+*   **RLHF Auto-Refine System (Self-Correction):** 
+    *   **Mistake Analysis:** The system identifies discrepancies between AI predictions and human corrections.
+    *   **Prompt Optimization:** A "Meta-Agent" analyzes these mistakes and generates a new, improved System Prompt.
+    *   **Human-in-the-Loop Review:** The system presents the suggested prompt for **Human Review** (Accept or Reject) before deployment.
+    *   **Instant Hot-Swapping:** Once accepted, the backend instantly updates its internal logic to improve future accuracy.
+*   **Real-Time Accuracy Analytics:** Live tracking of Total Processed data, Pending Reviews, and AI Accuracy percentage.
 
-## 📂 System Architecture & Folder Structure
+## 📂 System Architecture
 
 ```
 RL-Annotate/
 │
-├── client/                     # React Frontend (Vite)
+├── client/                     # React Frontend
 │   ├── src/
-│   │   ├── components/         # UI Components
+│   │   ├── components/         
 │   │   │   ├── Dashboard.jsx   # Top-level analytics metrics
-│   │   │   ├── IngestionForm.jsx # Text input for AI
-│   │   │   ├── ReviewTable.jsx # HITL data verification interface
-│   │   │   └── PromptTuner.jsx # RLHF self-correction system
-│   │   ├── App.jsx             # Main Application Logic
+│   │   │   ├── IngestionForm.jsx # Data entry portal
+│   │   │   ├── ReviewTable.jsx # HITL verification interface
+│   │   │   └── PromptTuner.jsx # RLHF Auto-Refine System
 │   │   └── index.css           # Premium Professional Design System
-│   └── package.json
 │
-├── server/                     # Express Backend API
+├── server/                     # Express Backend
 │   ├── controllers/
-│   │   └── annotationController.js # AI Integration & RLHF calculation logic
+│   │   └── annotationController.js # AI Logic & Prompt Engineering
 │   ├── models/
-│   │   └── Annotation.js       # MongoDB Schema for tracking accuracy
+│   │   └── Annotation.js       # MongoDB Schema for quality tracking
 │   ├── routes/
-│   │   └── annotationRoutes.js # RESTful endpoints
-│   ├── server.js               # Application Entry Point
-│   └── .env                    # Environment variables (MongoDB URI, AI API Key)
+│   │   └── annotationRoutes.js # RESTful API Endpoints
+│   └── server.js               # Application Entry Point
 ```
-
-### Database Schema (The "Source of Truth")
-We use a dual-label schema to track AI performance against human logic.
-```javascript
-{
-  text_input: String,
-  ai_prediction: { label: String, reasoning: String },
-  human_correction: { label: String, verified: Boolean },
-  accuracy_score: Number, // 1 if match, 0 if mismatch
-  timestamp: Date
-}
-```
-
-### AI Agent & RLHF Workflow
-The system implements a complete Reinforcement Learning cycle:
-1.  **Ingestion:** Raw text is uploaded via the React dashboard.
-2.  **Auto-Label:** The Node.js agent predicts the category (using Gemini) and saves it to MongoDB.
-3.  **Review:** The user sees a comparison table. If the AI is wrong, the user overrides the label.
-4.  **Reinforce (Auto-Refine):** Clicking "Auto-Refine" triggers a "Meta-Agent" that looks at the mistakes, analyzes the discrepancy, and rewrites the System Prompt to optimize future model behavior.
 
 ---
 
-## 🛠️ Setup Instructions
+## 🛠️ Setup & Installation
 
 ### Prerequisites
 - Node.js installed
-- MongoDB Cluster URL (Atlas)
+- MongoDB Atlas URL
 - Gemini API Key
 
-### Installation
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/VikramDonthi/RL-Annotate.git
-    cd RL-Annotate
-    ```
-2.  **Server Setup:**
-    ```bash
-    cd server
-    npm install
-    # Create .env with PORT, MONGODB_URI, and GEMINI_API_KEY
-    npm start
-    ```
-3.  **Client Setup:**
-    ```bash
-    cd client
-    npm install
-    npm run dev
-    ```
+### 1. Clone & Install
+```bash
+git clone https://github.com/VikramDonthi/RL-Annotate.git
+cd RL-Annotate
+```
+
+### 2. Server Setup
+```bash
+cd server
+npm install
+# Configure your .env with MONGODB_URI and GEMINI_API_KEY
+npm start
+```
+
+### 3. Client Setup
+```bash
+cd client
+npm install
+npm run dev
+```
 
 ---
 
 ## 🎯 Alignment with Ethara.AI
 This project demonstrates readiness for the **Software Engineer – AI Data Operations** role by showcasing:
-*   **Structured Thinking:** Designing schemas for quality benchmarking.
-*   **Engineering Fundamentals:** Building a robust MERN stack application with API integration.
-*   **Operational Discipline:** Understanding the metrics-driven nature of RLHF and the importance of closing the human-feedback loop.
+*   **Structured Thinking:** Designing schemas for quality benchmarking and accuracy tracking.
+*   **Engineering Fundamentals:** Building a robust, full-stack MERN application with sophisticated API error handling (429/404) and offline fallback modes.
+*   **Operational Discipline:** Implementing the full RLHF lifecycle—from data ingestion to human verification and model reinforcement.
 
-## 🚀 Deployment (Recommended)
-- **Frontend:** Deploy the `client` folder to **Vercel** or **Netlify**.
-- **Backend:** Deploy the `server` folder to **Render** or **Railway**.
-- **Database:** Connect to your existing **MongoDB Atlas** cluster.
-- **Environment Variables:** Ensure `MONGODB_URI` and `GEMINI_API_KEY` are set in your production host settings.
+## 🚀 Deployment
+- **Frontend:** Vercel / Netlify
+- **Backend:** Render / Railway
+- **Database:** MongoDB Atlas

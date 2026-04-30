@@ -77,10 +77,6 @@ npm install
 npm run dev
 ```
 
----
-
-## 🎯 Alignment with Ethara.AI
-This project demonstrates readiness for the **Software Engineer – AI Data Operations** role by showcasing:
 *   **Structured Thinking:** Designing schemas for quality benchmarking and accuracy tracking.
 *   **Engineering Fundamentals:** Building a robust, full-stack MERN application with sophisticated API error handling (429/404) and offline fallback modes.
 *   **Operational Discipline:** Implementing the full RLHF lifecycle—from data ingestion to human verification and model reinforcement.

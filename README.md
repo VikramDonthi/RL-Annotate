@@ -1,7 +1,9 @@
 # RL-Annotate: AI-Driven Data Reinforcement Pipeline
 
 ## 📌 Project Overview
-**RL-Annotate** is a high-performance MERN stack application designed to automate the categorization of unstructured text data using AI Agents. The platform implements a **Human-in-the-Loop (HITL)** verification system, allowing human engineers to review and correct AI-generated labels—simulating the core **RLHF (Reinforcement Learning from Human Feedback)** workflows used in modern LLM training.
+**RL-Annotate** is a state-of-the-art MERN stack application designed to bridge the gap between unstructured data ingestion and high-precision AI classification. By implementing a sophisticated **Human-in-the-Loop (HITL)** verification system, the platform simulates the **RLHF (Reinforcement Learning from Human Feedback)** workflows essential for fine-tuning Large Language Models. 
+
+Unlike traditional static labelers, RL-Annotate features an **autonomous reinforcement loop**: it detects when a human engineer overrides an AI prediction, analyzes the reasoning gap, and enables the user to "Self-Refine" the AI's core instructions—turning human corrections into a direct performance boost for the entire pipeline.
 
 ## 🛠️ Tech Stack & Skills Showcased
 *   **Frontend:** React.js (Vite), Modern Vanilla CSS (SaaS aesthetic).

@@ -1,17 +1,23 @@
 {
-  "name": "client",
+  "name": "rl-annotate",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node api/index.js"
   },
   "dependencies": {
+    "@google/genai": "^1.51.0",
     "axios": "^1.15.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "lucide-react": "^1.14.0",
+    "mongoose": "^9.6.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

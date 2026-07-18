@@ -36,7 +36,7 @@ exports.createAnnotation = async (req, res) => {
       
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash', // Reverting to 2.0-flash which your key supports
+          model: 'gemini-flash-latest', // Switched to 1.5 Flash alias for active free tier support
           contents: prompt,
         });
         const text = response.text;
@@ -158,7 +158,7 @@ Return ONLY the new prompt text. Do not use markdown blocks like \`\`\`.
     let newPromptText = "";
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-flash-latest',
         contents: optimizationPrompt,
       });
       newPromptText = response.text.trim();

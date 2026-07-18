@@ -1,4 +1,5 @@
 const Annotation = require('../models/Annotation');
+const Rule = require('../models/Rule');
 const { GoogleGenAI } = require('@google/genai');
 
 let ai;
@@ -9,51 +10,88 @@ if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_ap
 // Global variable to hold the dynamic system prompt (In production, store this in MongoDB)
 let currentSystemPrompt = `Analyze the following text and categorize it into one of these domains: 'Bug', 'Feature', 'Urgent', 'Question', 'Feedback', or 'General'. Provide your response in valid JSON format including 'label' and 'reasoning' fields. Do not include markdown formatting.\n\nText:`;
 
+const defaultRules = [
+  { label: 'Bug', keywords: ['crash', 'bug', 'broken', 'error', 'fail', 'freeze', 'issue', 'not responding', 'not working'] },
+  { label: 'Feature', keywords: ['add', 'feature', 'would be amazing', 'integration', 'request', 'new button', 'support for'] },
+  { label: 'Urgent', keywords: ['down', 'immediately', 'vulnerability', 'critical', 'emergency', 'blocker', 'broken production'] },
+  { label: 'Question', keywords: ['how do i', 'does your', 'can you', 'question', 'help', 'what is'] },
+  { label: 'Feedback', keywords: ['love', 'great', 'feedback', 'opinion', 'suggestion', 'idea'] },
+  { label: 'General', keywords: [] }
+];
+
+async function seedDefaultRules() {
+  try {
+    const count = await Rule.countDocuments();
+    if (count === 0) {
+      await Rule.insertMany(defaultRules);
+      console.log('✅ Default local classification rules seeded in database.');
+    }
+  } catch (err) {
+    console.error('Error seeding default rules:', err);
+  }
+}
+
 
 exports.createAnnotation = async (req, res) => {
   try {
     const { text_input } = req.body;
     
-    // 1. Generate a local mock prediction first as a safe fallback
-    let ai_prediction = { label: "General", reasoning: "No specific domain keywords detected. (Local Mock)" };
+    // Seed rules lazily if not done
+    await seedDefaultRules();
+
+    // 1. Attempt local keyword matching
+    const rules = await Rule.find();
     const lowerText = text_input.toLowerCase();
-    
-    if (lowerText.includes('crash') || lowerText.includes('bug') || lowerText.includes('broken') || lowerText.includes('error')) {
-      ai_prediction = { label: "Bug", reasoning: "Detected keywords indicating a software failure or malfunction. (Local Mock)" };
-    } else if (lowerText.includes('add') || lowerText.includes('feature') || lowerText.includes('would be amazing') || lowerText.includes('integration')) {
-      ai_prediction = { label: "Feature", reasoning: "User is requesting new functionality or enhancements. (Local Mock)" };
-    } else if (lowerText.includes('down') || lowerText.includes('immediately') || lowerText.includes('vulnerability')) {
-      ai_prediction = { label: "Urgent", reasoning: "Contains critical keywords requiring immediate attention. (Local Mock)" };
-    } else if (lowerText.includes('how do i') || lowerText.includes('does your') || lowerText.includes('can you')) {
-      ai_prediction = { label: "Question", reasoning: "Phrased as an inquiry or seeking assistance. (Local Mock)" };
-    } else if (lowerText.includes('love') || lowerText.includes('great') || lowerText.includes('feedback')) {
-      ai_prediction = { label: "Feedback", reasoning: "Contains sentiment expressing an opinion or review. (Local Mock)" };
+    let localMatch = null;
+    let matchedKeyword = "";
+
+    // Scan each rule (except General) to find any matching keyword
+    for (const rule of rules) {
+      if (rule.label === 'General') continue;
+      for (const keyword of rule.keywords) {
+        if (lowerText.includes(keyword.toLowerCase())) {
+          localMatch = rule.label;
+          matchedKeyword = keyword;
+          break; // Stop on first keyword match
+        }
+      }
+      if (localMatch) break;
     }
 
-    // 2. Attempt to use the real Gemini API if the key is present
-    if (ai) {
-      const prompt = `${currentSystemPrompt} "${text_input}"`;
-      
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-flash-latest', // Switched to 1.5 Flash alias for active free tier support
-          contents: prompt,
-        });
-        const text = response.text;
+    let ai_prediction = { label: "General", reasoning: "No specific domain keywords detected. (Local Mock)" };
+
+    if (localMatch) {
+      // Local match found! Skip Gemini API call
+      ai_prediction = {
+        label: localMatch,
+        reasoning: `Classified locally via keyword match: '${matchedKeyword}' (Local Classifier)`
+      };
+    } else {
+      // 2. Fallback to Gemini API if no local rule matches
+      if (ai) {
+        const prompt = `${currentSystemPrompt} "${text_input}"`;
         
-        // Robust JSON extraction
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const resultText = jsonMatch ? jsonMatch[0] : text;
-        
-        const parsed = JSON.parse(resultText);
-        ai_prediction = {
-          label: parsed.label,
-          reasoning: parsed.reasoning
-        };
-      } catch (e) {
-        console.error("Gemini API Error:", e.status, e.message);
-        // API failed (e.g. 429 Rate Limit). We gracefully fallback to our local prediction.
-        ai_prediction.reasoning += " [Notice: API Unavailable. Using offline fallback mode.]";
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-flash-latest', // Switched to 1.5 Flash alias for active free tier support
+            contents: prompt,
+          });
+          const text = response.text;
+          
+          // Robust JSON extraction
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          const resultText = jsonMatch ? jsonMatch[0] : text;
+          
+          const parsed = JSON.parse(resultText);
+          ai_prediction = {
+            label: parsed.label,
+            reasoning: `[AI Classifier] ${parsed.reasoning}`
+          };
+        } catch (e) {
+          console.error("Gemini API Error:", e.status, e.message);
+          // API failed (e.g. 429 Rate Limit). We gracefully fallback to our local prediction.
+          ai_prediction.reasoning += " [Notice: API Unavailable. Using offline fallback mode.]";
+        }
       }
     }
 
@@ -89,8 +127,8 @@ exports.verifyAnnotation = async (req, res) => {
       return res.status(404).json({ error: 'Annotation not found' });
     }
 
-    // RLHF Logic: Calculate accuracy
-    const isMatch = annotation.ai_prediction.label.toLowerCase() === label.toLowerCase();
+    const originalLabel = annotation.ai_prediction.label;
+    const isMatch = originalLabel.toLowerCase() === label.toLowerCase();
     const accuracy_score = isMatch ? 1 : 0;
 
     annotation.human_correction = {
@@ -100,8 +138,56 @@ exports.verifyAnnotation = async (req, res) => {
     annotation.accuracy_score = accuracy_score;
 
     await annotation.save();
-    res.status(200).json(annotation);
+
+    let learnedKeyword = null;
+
+    // RLHF Logic: Learn new local rules from corrections
+    if (!isMatch && ai) {
+      const metaAgentPrompt = `
+The text classification system received this input:
+"${annotation.text_input}"
+
+The system classified it as "${originalLabel}", but the human supervisor corrected it to "${label}".
+
+Analyze the input text and suggest a single, concise keyword or short phrase (1-3 words) present in the text that uniquely identifies it as belonging to the "${label}" category. 
+This keyword will be added to our local pattern matcher to classify similar text locally in the future.
+
+Rules:
+1. The keyword/phrase MUST be exactly present in the input text (case-insensitive).
+2. It should be highly specific to the "${label}" category.
+3. Return ONLY the keyword/phrase. Do not include quotes, markdown formatting, explanation, or punctuation.
+4. If no specific keyword can be extracted, return 'NONE'.
+`.trim();
+
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-flash-latest',
+          contents: metaAgentPrompt,
+        });
+        const extracted = response.text.trim().replace(/['"`]/g, "");
+
+        if (extracted && extracted !== 'NONE' && extracted.toLowerCase() !== 'none') {
+          if (annotation.text_input.toLowerCase().includes(extracted.toLowerCase())) {
+            const rule = await Rule.findOne({ label });
+            if (rule && !rule.keywords.map(k => k.toLowerCase()).includes(extracted.toLowerCase())) {
+              rule.keywords.push(extracted);
+              await rule.save();
+              learnedKeyword = extracted;
+              console.log(`💡 Local Rule Learned: Added keyword '${extracted}' to '${label}'`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Meta-Agent rule learning error:", err);
+      }
+    }
+
+    res.status(200).json({
+      annotation,
+      learnedKeyword
+    });
   } catch (error) {
+    console.error("Error verifying annotation:", error);
     res.status(500).json({ error: 'Failed to verify annotation' });
   }
 };

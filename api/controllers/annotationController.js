@@ -10,6 +10,10 @@ if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_ap
 // Global variable to hold the dynamic system prompt (In production, store this in MongoDB)
 let currentSystemPrompt = `Analyze the following text and categorize it into one of these domains: 'Bug', 'Feature', 'Urgent', 'Question', 'Feedback', or 'General'. Provide your response in valid JSON format including 'label' and 'reasoning' fields. Do not include markdown formatting.\n\nText:`;
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const defaultRules = [
   { label: 'Bug', keywords: ['crash', 'bug', 'broken', 'error', 'fail', 'freeze', 'issue', 'not responding', 'not working'] },
   { label: 'Feature', keywords: ['add', 'feature', 'would be amazing', 'integration', 'request', 'new button', 'support for'] },
@@ -39,23 +43,79 @@ exports.createAnnotation = async (req, res) => {
     // Seed rules lazily if not done
     await seedDefaultRules();
 
-    // 1. Attempt local keyword matching
+    // 1. Attempt local keyword/regex matching with score calculation
     const rules = await Rule.find();
     const lowerText = text_input.toLowerCase();
-    let localMatch = null;
-    let matchedKeyword = "";
+    
+    // Priorities list to resolve ties (index-based, earlier in list has higher priority)
+    const priority = ['Urgent', 'Bug', 'Feature', 'Question', 'Feedback', 'General'];
+    
+    let scores = {};
+    let matchedKeywords = {}; // Track which keyword matched for reasoning
 
-    // Scan each rule (except General) to find any matching keyword
-    for (const rule of rules) {
-      if (rule.label === 'General') continue;
-      for (const keyword of rule.keywords) {
-        if (lowerText.includes(keyword.toLowerCase())) {
-          localMatch = rule.label;
-          matchedKeyword = keyword;
-          break; // Stop on first keyword match
+    // Initialize scores for all rules
+    rules.forEach(rule => {
+      scores[rule.label] = 0;
+      matchedKeywords[rule.label] = [];
+    });
+
+    // Scan each rule's keywords/patterns
+    rules.forEach(rule => {
+      if (rule.label === 'General') return;
+      rule.keywords.forEach(keyword => {
+        let isMatch = false;
+
+        // Check if keyword is written as a regex, e.g. /button.*not.*responding/i
+        if (keyword.startsWith('/') && keyword.endsWith('/')) {
+          try {
+            const lastSlashIndex = keyword.lastIndexOf('/');
+            const pattern = keyword.substring(1, lastSlashIndex);
+            const flags = keyword.substring(lastSlashIndex + 1) || 'i';
+            const regex = new RegExp(pattern, flags);
+            isMatch = regex.test(text_input);
+          } catch (err) {
+            console.error(`Invalid regex rule: ${keyword}`, err);
+          }
+        } else {
+          // Standard keyword: match as whole word using word boundaries
+          const escaped = escapeRegExp(keyword);
+          const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+          isMatch = regex.test(text_input);
         }
+
+        if (isMatch) {
+          scores[rule.label] += 1;
+          matchedKeywords[rule.label].push(keyword);
+        }
+      });
+    });
+
+    // Find the category with the highest score
+    let highestScore = 0;
+    let winningCategories = [];
+
+    Object.keys(scores).forEach(label => {
+      if (scores[label] > highestScore) {
+        highestScore = scores[label];
+        winningCategories = [label];
+      } else if (scores[label] === highestScore && highestScore > 0) {
+        winningCategories.push(label);
       }
-      if (localMatch) break;
+    });
+
+    let localMatch = null;
+    let matchedReasoning = "";
+
+    if (highestScore > 0) {
+      if (winningCategories.length === 1) {
+        localMatch = winningCategories[0];
+      } else {
+        // Resolve tie using priority array
+        localMatch = winningCategories.sort((a, b) => priority.indexOf(a) - priority.indexOf(b))[0];
+      }
+      
+      const keywordsList = matchedKeywords[localMatch].join("', '");
+      matchedReasoning = `Classified locally via keyword matches: '${keywordsList}' (Score: ${highestScore}) (Local Classifier)`;
     }
 
     let ai_prediction = { label: "General", reasoning: "No specific domain keywords detected. (Local Mock)" };
@@ -64,7 +124,7 @@ exports.createAnnotation = async (req, res) => {
       // Local match found! Skip Gemini API call
       ai_prediction = {
         label: localMatch,
-        reasoning: `Classified locally via keyword match: '${matchedKeyword}' (Local Classifier)`
+        reasoning: matchedReasoning
       };
     } else {
       // 2. Fallback to Gemini API if no local rule matches
@@ -149,14 +209,14 @@ The text classification system received this input:
 
 The system classified it as "${originalLabel}", but the human supervisor corrected it to "${label}".
 
-Analyze the input text and suggest a single, concise keyword or short phrase (1-3 words) present in the text that uniquely identifies it as belonging to the "${label}" category. 
-This keyword will be added to our local pattern matcher to classify similar text locally in the future.
+Analyze the input text and suggest a single, concise keyword, short phrase, or a Javascript Regular Expression that is present in the text and uniquely identifies it as belonging to the "${label}" category.
 
 Rules:
-1. The keyword/phrase MUST be exactly present in the input text (case-insensitive).
-2. It should be highly specific to the "${label}" category.
-3. Return ONLY the keyword/phrase. Do not include quotes, markdown formatting, explanation, or punctuation.
-4. If no specific keyword can be extracted, return 'NONE'.
+1. If suggesting a keyword or phrase, it MUST be exactly present in the input text (case-insensitive).
+2. If suggesting a Regular Expression, it MUST match the input text and be enclosed in slashes with case-insensitivity flag (e.g., /button.*not.*responding/i).
+3. The suggestion should be highly specific to the "${label}" category.
+4. Return ONLY the pattern (e.g., "timeout" or "/button.*not.*responding/i"). Do not include quotes, markdown code blocks, explanation, or punctuation.
+5. If no pattern can be extracted, return 'NONE'.
 `.trim();
 
       try {
@@ -167,13 +227,29 @@ Rules:
         const extracted = response.text.trim().replace(/['"`]/g, "");
 
         if (extracted && extracted !== 'NONE' && extracted.toLowerCase() !== 'none') {
-          if (annotation.text_input.toLowerCase().includes(extracted.toLowerCase())) {
+          let isValidPattern = false;
+
+          if (extracted.startsWith('/') && extracted.endsWith('/')) {
+            try {
+              const lastSlashIndex = extracted.lastIndexOf('/');
+              const pattern = extracted.substring(1, lastSlashIndex);
+              const flags = extracted.substring(lastSlashIndex + 1) || 'i';
+              const regex = new RegExp(pattern, flags);
+              isValidPattern = regex.test(annotation.text_input);
+            } catch (regErr) {
+              console.error("Meta-Agent generated invalid regex:", extracted, regErr);
+            }
+          } else {
+            isValidPattern = annotation.text_input.toLowerCase().includes(extracted.toLowerCase());
+          }
+
+          if (isValidPattern) {
             const rule = await Rule.findOne({ label });
             if (rule && !rule.keywords.map(k => k.toLowerCase()).includes(extracted.toLowerCase())) {
               rule.keywords.push(extracted);
               await rule.save();
               learnedKeyword = extracted;
-              console.log(`💡 Local Rule Learned: Added keyword '${extracted}' to '${label}'`);
+              console.log(`💡 Local Rule Learned: Added pattern '${extracted}' to '${label}'`);
             }
           }
         }

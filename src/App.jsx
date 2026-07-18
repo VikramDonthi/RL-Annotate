@@ -4,9 +4,17 @@ import StatCards from './components/StatCards';
 import IngestionForm from './components/IngestionForm';
 import ReviewTable from './components/ReviewTable';
 import PromptTuner from './components/PromptTuner';
+import Login from './components/Login';
 import { API_BASE_URL } from './config';
 
+// Configure initial Axios auth token if it exists in local storage
+const token = localStorage.getItem('rl_annotate_token');
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(!!token);
   const [annotations, setAnnotations] = useState([]);
   const [stats, setStats] = useState({ total_processed: 0, pending_reviews: 0, ai_accuracy: '0%' });
 
@@ -16,6 +24,9 @@ function App() {
       setAnnotations(annRes.data);
     } catch (error) {
       console.error("Error fetching annotations:", error);
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
     }
 
     try {
@@ -27,9 +38,10 @@ function App() {
   };
 
   useEffect(() => {
-    fetchData();
-    // In a real app, we might use WebSockets for real-time updates. Polling is okay for demo.
-  }, []);
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
 
   const handleNewAnnotation = (newAnn) => {
     setAnnotations([newAnn, ...annotations]);
@@ -41,12 +53,25 @@ function App() {
     fetchData(); // Refresh stats
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('rl_annotate_token');
+    delete axios.defaults.headers.common['Authorization'];
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="app-container">
-      <header className="header">
-        <h1>RL-Annotate Dashboard</h1>
-        <p className="header-subtitle">AI-Driven Data Reinforcement & Verification Pipeline</p>
-      </header>
+      <div className="header-actions">
+        <header className="header">
+          <h1>RL-Annotate Dashboard</h1>
+          <p className="header-subtitle">AI-Driven Data Reinforcement & Verification Pipeline</p>
+        </header>
+        <button className="btn btn-outline" onClick={handleLogout}>Log Out</button>
+      </div>
 
       <main className="grid">
         <StatCards stats={stats} />

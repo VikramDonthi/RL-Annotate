@@ -326,3 +326,118 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Login screen styles */
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: radial-gradient(circle at top left, #eff6ff 0%, #f8fafc 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 2.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+.login-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-error {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.login-form .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.login-form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.btn-login {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1rem;
+}
+
+.btn-login:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--surface-border);
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+}
+
+.header-actions .header {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}

@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const annotationController = require('../controllers/annotationController');
+const auth = require('../middleware/auth');
+
+// Protect all annotation routes
+router.use(auth);
 
 router.post('/', annotationController.createAnnotation);
 router.get('/', annotationController.getAnnotations);

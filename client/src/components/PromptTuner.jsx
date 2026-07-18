@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Check, X, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const PromptTuner = () => {
   const [loading, setLoading] = useState(false);
@@ -12,7 +13,7 @@ const PromptTuner = () => {
     setStatusMsg('');
     setSuggestedPrompt(null);
     try {
-      const res = await axios.get('http://localhost:5000/api/annotations/optimize-prompt');
+      const res = await axios.get(`${API_BASE_URL}/api/annotations/optimize-prompt`);
       if (res.data.suggested_prompt.includes('No mistakes found')) {
         setStatusMsg(res.data.suggested_prompt);
       } else {
@@ -28,7 +29,7 @@ const PromptTuner = () => {
 
   const handleAccept = async () => {
     try {
-      await axios.post('http://localhost:5000/api/annotations/update-prompt', { new_prompt: suggestedPrompt });
+      await axios.post(`${API_BASE_URL}/api/annotations/update-prompt`, { new_prompt: suggestedPrompt });
       setStatusMsg('Success! New AI System Prompt is now active.');
       setSuggestedPrompt(null);
     } catch (err) {

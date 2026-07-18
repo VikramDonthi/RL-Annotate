@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const IngestionForm = ({ onNewAnnotation }) => {
   const [text, setText] = useState('');
@@ -12,7 +13,7 @@ const IngestionForm = ({ onNewAnnotation }) => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/annotations', {
+      const response = await axios.post(`${API_BASE_URL}/api/annotations`, {
         text_input: text
       });
       onNewAnnotation(response.data);

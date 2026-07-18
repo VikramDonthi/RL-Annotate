@@ -4,6 +4,7 @@ import StatCards from './components/StatCards';
 import IngestionForm from './components/IngestionForm';
 import ReviewTable from './components/ReviewTable';
 import PromptTuner from './components/PromptTuner';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [annotations, setAnnotations] = useState([]);
@@ -11,14 +12,14 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const annRes = await axios.get('http://localhost:5000/api/annotations');
+      const annRes = await axios.get(`${API_BASE_URL}/api/annotations`);
       setAnnotations(annRes.data);
     } catch (error) {
       console.error("Error fetching annotations:", error);
     }
 
     try {
-      const statsRes = await axios.get('http://localhost:5000/api/annotations/stats');
+      const statsRes = await axios.get(`${API_BASE_URL}/api/annotations/stats`);
       setStats(statsRes.data);
     } catch (error) {
       console.error("Error fetching stats:", error);

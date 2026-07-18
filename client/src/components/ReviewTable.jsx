@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertCircle, Edit2 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const getBadgeClass = (label) => {
   const normalized = label?.toLowerCase();
@@ -18,7 +19,7 @@ const ReviewTable = ({ annotations, onVerify }) => {
 
   const handleVerify = async (id, finalLabel) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/annotations/${id}/verify`, {
+      const response = await axios.put(`${API_BASE_URL}/api/annotations/${id}/verify`, {
         label: finalLabel
       });
       onVerify(response.data);

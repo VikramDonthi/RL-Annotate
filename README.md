@@ -84,11 +84,13 @@ npm run dev
 - **Database:** MongoDB Atlas
 
 **Screenshots**
-
-<img width="1902" height="1032" alt="Screenshot 2026-07-19 180845" src="https://github.com/user-attachments/assets/75cdeff5-9ff3-4b2f-8d4d-3e69c5340949" />
-<img width="1913" height="1038" alt="Screenshot 2026-07-19 180828" src="https://github.com/user-attachments/assets/18b324e6-bcd7-4906-b572-f208208d8a63" />
-<img width="1917" height="1042" alt="Screenshot 2026-07-19 180809" src="https://github.com/user-attachments/assets/c3730563-2d84-45eb-933f-d5477c98e2e6" />
 <img width="1910" height="1053" alt="Screenshot 2026-07-19 180754" src="https://github.com/user-attachments/assets/295a49e2-7b76-4f09-8b3b-0870a070404f" />
+<img width="1917" height="1042" alt="Screenshot 2026-07-19 180809" src="https://github.com/user-attachments/assets/c3730563-2d84-45eb-933f-d5477c98e2e6" />
+<img width="1913" height="1038" alt="Screenshot 2026-07-19 180828" src="https://github.com/user-attachments/assets/18b324e6-bcd7-4906-b572-f208208d8a63" />
+<img width="1902" height="1032" alt="Screenshot 2026-07-19 180845" src="https://github.com/user-attachments/assets/75cdeff5-9ff3-4b2f-8d4d-3e69c5340949" />
+
+
+
 
 
 
